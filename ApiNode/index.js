@@ -2,6 +2,19 @@ const mysql = require('mysql');
 const exp = require("express");
 const app = exp();
 var cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+//Cấu hình multer 
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage: storage });
+
 app.use([cors(), exp.json()]);
 const db = mysql.createConnection({
     host: 'localhost',
@@ -10,6 +23,7 @@ const db = mysql.createConnection({
     port: 3306,
     database: 'laptop_react'
 });
+app.use('/uploads', exp.static(path.join(__dirname, 'uploads')));
 db.connect(err => { if (err) throw err; console.log('Da ket noi database') });
 
 //Route lấy sản phẩm mới
@@ -131,30 +145,53 @@ app.get("/admin/sp/:id", function (req, res) {
     })
 })
 //Route thêm sản phẩm
-app.post("/admin/sp", function (req, res) {
+
+app.post("/admin/sp", upload.single('hinh'), function (req, res) {
+    console.log(req.file);
+
+    if (!req.file) {
+        console.error("Không tìm thấy file");
+        return res.status(400).json({ message: "Không tìm thấy file" })
+    }
+
     let data = req.body;
-    let sql = `INSERT INTO san_pham SET ?`
-    db.query(sql, data, (err, data) => {
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const imagePath = `${baseUrl}/uploads/${req.file.filename}`;
+    data.hinh = imagePath;
+
+    //Nếu cần sài cloudinary thì mở cái này lên và cấu hình chung với cloudinary
+    // if (req.file) {
+    //     data.hinh = req.file.path;  // Lưu đường dẫn file hình vào database
+    // }
+
+    let sql = `INSERT INTO san_pham SET ?`;
+    db.query(sql, data, (err, result) => {
         if (err) {
-            res.json({ "thongbao": "Lỗi thêm sản phẩm ", err })
+            res.json({ "thongbao": "Lỗi thêm sản phẩm ", err });
         } else {
-            res.json({ "thongbao": "Đã thêm 1 sản phẩm mới", "id": data.insertId })
+            res.json({ "thongbao": "Đã thêm 1 sản phẩm mới", "id": result.insertId });
         }
-    })
-})
+    });
+});
+
 //Route cập nhật sản phẩm
-app.put('/admin/sp/:id', function (req, res) {
+app.put('/admin/sp/:id', upload.single('hinh'), function (req, res) {
     let data = req.body;
+    if (req.file) {
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const imagePath = `${baseUrl}/uploads/${req.file.filename}`;
+        data.hinh = imagePath;
+    }
     let id = req.params.id;
     let sql = `UPDATE san_pham SET ? WHERE id=?`;
-    db.query(sql, [data, id], (err, d) => {
+    db.query(sql, [data, id], (err, result) => {
         if (err) {
-            res.json({ "thongbao": "Lỗi cập nhật sản phẩm", err })
+            res.json({ "thongbao": "Lỗi cập nhật sản phẩm", err });
         } else {
-            res.json({ "thongbao": "Đã cập nhật sản phẩm" })
+            res.json({ "thongbao": "Đã cập nhật sản phẩm" });
         }
-    })
-})
+    });
+});
 //Route xóa một sản phẩm
 app.delete('/admin/sp/:id', function (req, res) {
     let id = req.params.id;

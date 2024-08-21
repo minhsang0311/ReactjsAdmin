@@ -73,6 +73,7 @@ function SanPhamList() {
                 <thead>
                     <tr>
                         <th>Tên SP</th>
+                        <th>Hình</th>
                         <th>Ngày</th>
                         <th>Giá</th>
                         <th><a href="/admin/spthem">Thêm</a></th>
@@ -82,6 +83,7 @@ function SanPhamList() {
                     {filteredSP.map((sp, i) => (
                         <tr key={i}>
                             <td>{sp.ten_sp}</td>
+                            <td><img src={sp.hinh} alt={sp.ten_sp}/></td>
                             <td>{new Date(sp.ngay).toDateString("vi")}</td>
                             <td>{Number(sp.gia).toLocaleString("vi")} VNĐ</td>
                             <td>
